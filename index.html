@@ -848,6 +848,9 @@
       </div>
       <div class="quote-right">
         <form id="quoteForm">
+          <input type="hidden" name="access_key" value="6f6b66da-577b-4b96-93a5-67bf6931ad74">
+          <input type="hidden" name="subject" value="New free quote request - Godfreys website">
+          <input type="checkbox" name="botcheck" style="display:none;" tabindex="-1" autocomplete="off">
           <div class="field-row">
             <div class="field">
               <label for="name">Name</label>
@@ -878,9 +881,10 @@
             <textarea id="message" name="message" placeholder="Storey count, roof type, single or two-storey, anything you'd like us to know..."></textarea>
           </div>
           <div class="form-foot">
-            <button type="submit" class="btn btn-primary btn-block">Send my request</button>
+            <button type="submit" class="btn btn-primary btn-block" id="quoteSubmitBtn">Send my request</button>
           </div>
-          <p class="form-note" style="margin-top:12px;">Submitting opens your email app with the details pre-filled to godfreysservices@gmail.com — or just call 0432 097 369 direct.</p>
+          <p class="form-note" style="margin-top:12px;">We'll get back to you directly — usually the same day. Or just call 0432 097 369.</p>
+          <p id="formStatus" style="margin-top:10px; font-size:13.5px; font-weight:600;"></p>
         </form>
       </div>
     </div>
@@ -973,23 +977,44 @@
     window.addEventListener('pointerup', ()=> dragging = false);
   });
 
-  // Quote form -> mailto
-  document.getElementById('quoteForm').addEventListener('submit', function(e){
+  // Quote form -> Web3Forms
+  const quoteForm = document.getElementById('quoteForm');
+  const submitBtn = document.getElementById('quoteSubmitBtn');
+  const statusEl = document.getElementById('formStatus');
+
+  quoteForm.addEventListener('submit', function(e){
     e.preventDefault();
-    const name = document.getElementById('name').value;
-    const phone = document.getElementById('phone').value;
-    const suburb = document.getElementById('suburb').value;
-    const service = document.getElementById('service').value;
-    const message = document.getElementById('message').value;
-    const subject = encodeURIComponent('Free quote request - ' + name);
-    const body = encodeURIComponent(
-      'Name: ' + name + '\n' +
-      'Phone: ' + phone + '\n' +
-      'Suburb: ' + suburb + '\n' +
-      'Service needed: ' + service + '\n' +
-      'Details: ' + message
-    );
-    window.location.href = 'mailto:godfreysservices@gmail.com?subject=' + subject + '&body=' + body;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+    statusEl.textContent = '';
+    statusEl.style.color = 'var(--muted)';
+
+    const formData = new FormData(quoteForm);
+    const payload = Object.fromEntries(formData.entries());
+
+    fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        statusEl.textContent = "Thanks — your request has been sent. We'll be in touch shortly.";
+        statusEl.style.color = 'var(--mint-bright)';
+        quoteForm.reset();
+      } else {
+        throw new Error(data.message || 'Something went wrong');
+      }
+    })
+    .catch(() => {
+      statusEl.textContent = "Couldn't send that automatically — please call 0432 097 369 or email godfreysservices@gmail.com directly.";
+      statusEl.style.color = 'var(--rust)';
+    })
+    .finally(() => {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Send my request';
+    });
   });
 </script>
 </body>
